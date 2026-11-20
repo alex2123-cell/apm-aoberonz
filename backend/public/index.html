@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Aoberonz — live industry news</title>
+  <meta name="description" content="Live updates from factories, ports, farms, mines, banks and more — swipe through what industry is doing right now." />
+  <meta name="theme-color" content="#0b0f14" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="shell">
+    <nav id="nav" aria-label="Main">
+      <a class="brand" href="/" data-link>AOBERONZ</a>
+      <a href="/" data-link data-nav="feed"><span class="ico">⌂</span><span>Feed</span></a>
+      <a href="/explore" data-link data-nav="explore"><span class="ico">◎</span><span>Explore</span></a>
+      <a href="/saved" data-link data-nav="saved"><span class="ico">❏</span><span>Saved</span></a>
+      <a href="/profile" data-link data-nav="profile"><span class="ico">◯</span><span>Profile</span></a>
+    </nav>
+    <main id="view" tabindex="-1"></main>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="modal"></dialog>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

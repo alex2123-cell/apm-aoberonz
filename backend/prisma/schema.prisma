@@ -1,0 +1,253 @@
+// Aoberonz data model
+// Run `npx prisma migrate dev --name init` after changing this file.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  COMPANY_ADMIN
+  EDITOR
+  ADMIN
+}
+
+enum DeviceType {
+  CCTV
+  SMART_TV
+  RADIO
+  IOT_SENSOR
+  MOBILE
+  API
+}
+
+enum PostStatus {
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+}
+
+enum Risk {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum InteractionType {
+  VIEW
+  SKIP
+  SHARE
+}
+
+enum Platform {
+  WEBHOOK
+  TELEGRAM
+  FACEBOOK_PAGE
+  X
+}
+
+enum JobStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         Role          @default(USER)
+  companyId    String?
+  company      Company?      @relation(fields: [companyId], references: [id])
+  interests    UserInterest[]
+  interactions Interaction[]
+  likes        Like[]
+  saves        Save[]
+  follows      Follow[]
+  createdAt    DateTime      @default(now())
+}
+
+model Company {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  industry  String
+  county    String?
+  verified  Boolean   @default(false)
+  logoUrl   String?
+  autoPublish Boolean @default(true)
+  devices   Device[]
+  posts     Post[]
+  users     User[]
+  followers Follow[]
+  channels  Channel[]
+  createdAt DateTime  @default(now())
+}
+
+model Device {
+  id         String     @id @default(cuid())
+  companyId  String
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String
+  type       DeviceType
+  keyPrefix  String
+  apiKeyHash String     @unique
+  location   String?
+  active     Boolean    @default(true)
+  consentRef String     // reference to the signed data-sharing agreement
+  lastSeenAt DateTime?
+  events     Event[]
+  createdAt  DateTime   @default(now())
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  deviceId    String
+  device      Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  kind        String    // e.g. motion, vehicle_convoy, fire, speech, sensor_threshold
+  labels      String[]
+  transcript  String?
+  text        String?
+  mediaUrl    String?
+  reading     Json?
+  confidence  Float
+  capturedAt  DateTime
+  processedAt DateTime?
+  post        Post?
+  createdAt   DateTime  @default(now())
+
+  @@index([deviceId, capturedAt])
+}
+
+model Post {
+  id           String     @id @default(cuid())
+  companyId    String
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  eventId      String?    @unique
+  event        Event?     @relation(fields: [eventId], references: [id])
+  headline     String
+  summary      String
+  industry     String
+  county       String?
+  mediaUrl     String?
+  mediaType    String?    // image | video | audio
+  tags         String[]
+  language     String     @default("en")
+  risk         Risk       @default(LOW)
+  confidence   Float      @default(1)
+  aiGenerated  Boolean    @default(true)
+  status       PostStatus @default(PENDING_REVIEW)
+  reviewNote   String?
+  reviewedById String?
+  publishedAt  DateTime?
+  likeCount    Int        @default(0)
+  saveCount    Int        @default(0)
+  shareCount   Int        @default(0)
+  viewCount    Int        @default(0)
+  interactions Interaction[]
+  likes        Like[]
+  saves        Save[]
+  jobs         PublishJob[]
+  audits       AuditLog[]
+  createdAt    DateTime   @default(now())
+
+  @@index([status, publishedAt])
+  @@index([industry, publishedAt])
+  @@index([companyId, publishedAt])
+}
+
+model Interaction {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  type      InteractionType
+  dwellMs   Int?
+  createdAt DateTime        @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Like {
+  userId    String
+  postId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, postId])
+}
+
+model Save {
+  userId    String
+  postId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, postId])
+}
+
+model UserInterest {
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  industry String
+  weight   Float  @default(1)
+
+  @@id([userId, industry])
+}
+
+model Follow {
+  userId    String
+  companyId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, companyId])
+}
+
+model Channel {
+  id        String       @id @default(cuid())
+  companyId String
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  platform  Platform
+  name      String
+  config    Json         // tokens and ids; encrypt at rest in production (see docs/OPERATIONS.md)
+  active    Boolean      @default(true)
+  jobs      PublishJob[]
+  createdAt DateTime     @default(now())
+}
+
+model PublishJob {
+  id         String    @id @default(cuid())
+  postId     String
+  post       Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  channelId  String
+  channel    Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  status     JobStatus @default(QUEUED)
+  attempts   Int       @default(0)
+  error      String?
+  externalId String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  actorId   String?
+  action    String
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}

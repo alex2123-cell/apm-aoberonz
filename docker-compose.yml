@@ -1,0 +1,54 @@
+# Local development stack: Postgres, Redis, MQTT broker, API and worker.
+#   docker compose up -d --build
+#   docker compose exec api npx prisma migrate deploy     (after you've created migrations with `npm run db:migrate`)
+#   cd backend && npm run db:seed                         (seed from your machine; DATABASE_URL points at localhost:5432)
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: aoberonz
+      POSTGRES_PASSWORD: aoberonz
+      POSTGRES_DB: aoberonz
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aoberonz"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    command: ["mosquitto", "-c", "/mosquitto-no-auth.conf"]
+
+  api:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://aoberonz:aoberonz@postgres:5432/aoberonz?schema=public
+      REDIS_URL: redis://redis:6379
+    ports: ["4000:4000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  worker:
+    build: ./backend
+    command: ["node", "dist/workers/index.js"]
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://aoberonz:aoberonz@postgres:5432/aoberonz?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+
+volumes:
+  pgdata:
+  redisdata:

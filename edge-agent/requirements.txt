@@ -1,0 +1,8 @@
+# Core (always)
+requests>=2.32
+# Camera / HDMI capture
+opencv-python-headless>=4.10
+# Optional object detection (trucks, crowds): ultralytics>=8.3
+# Radio / TV audio transcription (also install ffmpeg on the machine): openai-whisper
+# IoT sensors over MQTT
+paho-mqtt>=2.1

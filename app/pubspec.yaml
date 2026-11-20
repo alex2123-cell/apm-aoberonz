@@ -1,0 +1,27 @@
+name: aoberonz
+description: Aoberonz — live industry news, swipe by swipe.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  get: ^4.7.2
+  dio: ^5.8.0
+  socket_io_client: ^3.1.2
+  cached_network_image: ^3.4.1
+  shared_preferences: ^2.5.3
+  share_plus: ^10.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
