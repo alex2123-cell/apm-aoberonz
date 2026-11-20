@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+dump.rdb
+*.log
+app/build/
+app/.dart_tool/
